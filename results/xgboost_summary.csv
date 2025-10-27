@@ -1,0 +1,6 @@
+Metric,Score,Interpretation
+Accuracy,0.9487,Excellent ✅
+Precision,0.9487,Excellent ✅
+Recall,0.9487,Excellent ✅
+F1-Score,0.9487,Excellent ✅
+ROC-AUC,0.9690,Outstanding ✅
