@@ -133,6 +133,10 @@ print(result)
 - `results/evaluation_results.csv` - Hasil evaluasi semua model
 - `config.json` - Konfigurasi dataset
 
+<p align="center">
+  <img src="assets/github_header.svg" alt="Header Deteksi Parkinson dengan Machine Learning">
+</p>
+
 ## 📈 Metrics Evaluasi
 
 Sistem mengevaluasi model menggunakan metrics berikut:
