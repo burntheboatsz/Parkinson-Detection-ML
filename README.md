@@ -134,7 +134,7 @@ print(result)
 - `config.json` - Konfigurasi dataset
 
 <p align="center">
-  <img src="assets/github_header.svg" alt="Header Deteksi Parkinson dengan Machine Learning">
+  <img src="assets/model_comparison.png" alt="Header Deteksi Parkinson dengan Machine Learning">
 </p>
 
 ## 📈 Metrics Evaluasi
