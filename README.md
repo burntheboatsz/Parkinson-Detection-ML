@@ -1,4 +1,8 @@
-# Parkinson Disease Detection System
+<p align="center">
+  <img src="assets/github_header.svg" alt="Header Deteksi Parkinson dengan Machine Learning">
+</p>
+
+# Sistem Deteksi Penyakit Parkinson Menggunakan Machine Learning
 
 Sistem deteksi Parkinson disease menggunakan Machine Learning dengan berbagai algoritma klasifikasi.
 
