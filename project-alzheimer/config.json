@@ -1,0 +1,10 @@
+{
+  "data_path": "../data/parkinsons.csv",
+  "target_column": "status",
+  "total_samples": 195,
+  "total_features": 23,
+  "class_distribution": {
+    "1": 147,
+    "0": 48
+  }
+}

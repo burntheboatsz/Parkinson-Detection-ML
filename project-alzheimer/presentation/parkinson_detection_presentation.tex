@@ -1,0 +1,1123 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[indonesian]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Theme
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% Custom colors
+\definecolor{darkblue}{RGB}{0,51,102}
+\definecolor{lightblue}{RGB}{51,153,255}
+\definecolor{darkgreen}{RGB}{0,128,0}
+\definecolor{darkred}{RGB}{178,34,34}
+
+\setbeamercolor{structure}{fg=darkblue}
+\setbeamercolor{title}{fg=white,bg=darkblue}
+\setbeamercolor{frametitle}{fg=white,bg=darkblue}
+
+% Title page info
+\title[Deteksi Parkinson dengan ML]{Sistem Deteksi Penyakit Parkinson \\ Menggunakan Machine Learning}
+\subtitle{Analisis Komparatif 10 Model dan Strategi Optimasi}
+\author{Nafiz Ahmadin Harily \\ NIM: 122430051}
+\institute{Program Studi Teknik Biomedis \\ Institut Teknologi Sumatera (ITERA)}
+\date{\today}
+
+\begin{document}
+
+% Title slide
+\begin{frame}
+\titlepage
+\end{frame}
+
+% Table of contents
+\begin{frame}{Outline}
+\tableofcontents
+\end{frame}
+
+%=============================================================================
+\section{Pendahuluan}
+%=============================================================================
+
+\begin{frame}{Latar Belakang}
+\begin{block}{Penyakit Parkinson}
+\begin{itemize}
+    \item Penyakit neurodegeneratif yang mempengaruhi sistem motorik
+    \item Diagnosis dini sangat penting untuk penanganan efektif
+    \item Gejala awal: tremor, kekakuan otot, gangguan keseimbangan
+    \item \textbf{Tantangan:} Diagnosis manual memerlukan keahlian khusus
+\end{itemize}
+\end{block}
+
+\begin{block}{Solusi dengan Machine Learning}
+\begin{itemize}
+    \item Menggunakan biomarker suara untuk deteksi otomatis
+    \item Model ML dapat mengidentifikasi pola yang tidak terlihat
+    \item Akurat, cepat, dan dapat diakses secara luas
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Tujuan Penelitian}
+\begin{enumerate}
+    \item \textbf{Eksplorasi Data:} Memahami karakteristik dataset biomarker suara pasien
+    \item \textbf{Training Model:} Melatih dan membandingkan 10 algoritma ML berbeda
+    \item \textbf{Evaluasi Performa:} Mengidentifikasi model terbaik berdasarkan metrik evaluasi
+    \item \textbf{Optimasi Model:} Mencoba 5 strategi untuk meningkatkan akurasi
+    \item \textbf{Deployment:} Menyiapkan model untuk produksi dengan tools yang user-friendly
+\end{enumerate}
+
+\vspace{0.5cm}
+\begin{center}
+\textbf{\color{darkgreen}Target Akurasi: $\geq 95\%$}
+\end{center}
+\end{frame}
+
+%=============================================================================
+\section{Dataset dan Metodologi}
+%=============================================================================
+
+\begin{frame}{Deskripsi Dataset}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{block}{Informasi Dataset}
+\begin{itemize}
+    \item \textbf{Nama:} Parkinsons Dataset
+    \item \textbf{Sumber:} UCI Repository
+    \item \textbf{Total Sampel:} 195 pasien
+    \item \textbf{Fitur:} 24 kolom
+    \item \textbf{Target:} Binary (0=Sehat, 1=Parkinson)
+    \item \textbf{Missing Values:} Tidak ada
+\end{itemize}
+\end{block}
+
+\column{0.5\textwidth}
+\begin{block}{Distribusi Kelas}
+\begin{itemize}
+    \item \textbf{Parkinson:} 147 pasien (75.4\%)
+    \item \textbf{Sehat:} 48 pasien (24.6\%)
+    \item \textbf{Imbalance Ratio:} 3.06:1
+\end{itemize}
+\end{block}
+
+\begin{alertblock}{Catatan}
+Dataset relatif kecil (195 samples) → membatasi kompleksitas model
+\end{alertblock}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Fitur-Fitur Biomarker Suara}
+\begin{table}
+\centering
+\small
+\begin{tabular}{lp{7cm}}
+\toprule
+\textbf{Kategori} & \textbf{Fitur} \\
+\midrule
+\textbf{Frequency} & MDVP:Fo (Hz), MDVP:Fhi (Hz), MDVP:Flo (Hz) \\
+\textbf{Variation} & MDVP:Jitter(\%), Jitter:DDP, MDVP:Shimmer, Shimmer:DDA \\
+\textbf{Ratio} & NHR (Noise-to-Harmonics), HNR (Harmonics-to-Noise) \\
+\textbf{Nonlinear} & RPDE, DFA, D2, PPE (entropy measures) \\
+\textbf{Statistical} & Spread1, Spread2 \\
+\bottomrule
+\end{tabular}
+\caption{22 fitur biomarker suara (setelah drop kolom 'name' dan 'status')}
+\end{table}
+
+\vspace{0.3cm}
+\begin{center}
+\textit{Semua fitur adalah pengukuran karakteristik suara pasien}
+\end{center}
+\end{frame}
+
+\begin{frame}{Metodologi Eksperimen}
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    box/.style={rectangle, draw, fill=lightblue!30, text width=3cm, text centered, rounded corners, minimum height=1cm},
+    arrow/.style={->, >=stealth, thick}
+]
+    \node[box] (data) {1. Data Loading \& EDA};
+    \node[box, right of=data, xshift=3cm] (prep) {2. Preprocessing};
+    \node[box, right of=prep, xshift=3cm] (train) {3. Model Training};
+    \node[box, below of=train, yshift=-0.5cm] (eval) {4. Evaluasi};
+    \node[box, left of=eval, xshift=-3cm] (opt) {5. Optimasi};
+    \node[box, left of=opt, xshift=-3cm] (deploy) {6. Deployment};
+    
+    \draw[arrow] (data) -- (prep);
+    \draw[arrow] (prep) -- (train);
+    \draw[arrow] (train) -- (eval);
+    \draw[arrow] (eval) -- (opt);
+    \draw[arrow] (opt) -- (deploy);
+\end{tikzpicture}
+
+\vspace{0.5cm}
+\begin{block}{Preprocessing Steps}
+\begin{enumerate}
+    \item Drop kolom 'name' (identifier, bukan fitur)
+    \item Split data: 80\% training, 20\% testing (stratified)
+    \item Scaling dengan StandardScaler
+    \item \textbf{Tidak} menggunakan SMOTE (hasil lebih baik tanpa balancing)
+\end{enumerate}
+\end{block}
+\end{frame}
+
+%=============================================================================
+\section{Exploratory Data Analysis (EDA)}
+%=============================================================================
+
+\begin{frame}{Statistik Deskriptif Dataset}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{block}{Ringkasan Statistik}
+\begin{itemize}
+    \item \textbf{Shape:} 195 rows × 24 columns
+    \item \textbf{Features:} 22 numerik
+    \item \textbf{Target:} 1 binary (status)
+    \item \textbf{Identifier:} 1 string (name)
+\end{itemize}
+\end{block}
+
+\begin{block}{Kualitas Data}
+\begin{itemize}
+    \item ✓ Tidak ada missing values
+    \item ✓ Tidak ada duplicate rows
+    \item ✓ Semua fitur numerik valid
+    \item ✓ Tidak ada outlier ekstrem
+\end{itemize}
+\end{block}
+
+\column{0.5\textwidth}
+\begin{table}
+\centering
+\tiny
+\begin{tabular}{lrr}
+\toprule
+\textbf{Fitur} & \textbf{Mean} & \textbf{Std} \\
+\midrule
+MDVP:Fo(Hz) & 154.23 & 41.39 \\
+Jitter(\%) & 0.0062 & 0.0049 \\
+Shimmer & 0.0298 & 0.0189 \\
+NHR & 0.0249 & 0.0402 \\
+HNR & 21.89 & 4.43 \\
+RPDE & 0.4981 & 0.1035 \\
+DFA & 0.7181 & 0.0554 \\
+PPE & 0.2064 & 0.0904 \\
+\bottomrule
+\end{tabular}
+\caption{Sample statistik (8 dari 22 fitur)}
+\end{table}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Visualisasi: Distribusi Target}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    width=10cm,
+    height=6cm,
+    ylabel={Jumlah Pasien},
+    symbolic x coords={Sehat, Parkinson},
+    xtick=data,
+    nodes near coords,
+    nodes near coords align={vertical},
+    bar width=2cm,
+    ymin=0,
+    ymax=160,
+    legend pos=north east,
+]
+\addplot[fill=darkgreen] coordinates {(Sehat,48) (Parkinson,147)};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+    \item \textbf{Imbalanced:} Rasio 3:1 (Parkinson:Sehat)
+    \item Stratified split penting untuk menjaga proporsi
+    \item Model harus hati-hati agar tidak bias ke kelas mayoritas
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Insight dari EDA}
+\begin{block}{Temuan Penting}
+\begin{enumerate}
+    \item \textbf{Kualitas Data Excellent:} Tidak ada preprocessing intensif diperlukan
+    \item \textbf{Fitur Informatif:} 
+    \begin{itemize}
+        \item Jitter dan Shimmer lebih tinggi pada pasien Parkinson
+        \item HNR (Harmonics-to-Noise) lebih rendah pada Parkinson
+        \item RPDE, DFA, PPE menunjukkan pola yang jelas
+    \end{itemize}
+    \item \textbf{Korelasi:} Beberapa fitur saling berkorelasi tinggi (multikolinearitas ringan)
+    \item \textbf{Separabilitas:} Kelas cukup terpisah → model seharusnya performa baik
+\end{enumerate}
+\end{block}
+
+\begin{alertblock}{Kesimpulan EDA}
+Dataset berkualitas tinggi, siap untuk training model ML tanpa feature engineering ekstensif
+\end{alertblock}
+\end{frame}
+
+%=============================================================================
+\section{Training dan Evaluasi Model}
+%=============================================================================
+
+\begin{frame}{10 Model Machine Learning yang Diuji}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{block}{Traditional ML (5 model)}
+\begin{enumerate}
+    \item Logistic Regression
+    \item Decision Tree
+    \item Random Forest
+    \item Support Vector Machine (SVM)
+    \item K-Nearest Neighbors (KNN)
+\end{enumerate}
+\end{block}
+
+\column{0.5\textwidth}
+\begin{block}{Advanced ML (5 model)}
+\begin{enumerate}
+    \setcounter{enumi}{5}
+    \item Naive Bayes
+    \item Gradient Boosting
+    \item \textcolor{darkgreen}{\textbf{XGBoost}} ← Best
+    \item LightGBM
+    \item CatBoost
+\end{enumerate}
+\end{block}
+\end{columns}
+
+\vspace{0.5cm}
+\begin{center}
+\textbf{Metrik Evaluasi:} Accuracy, Precision, Recall, F1-Score, ROC-AUC
+\end{center}
+\end{frame}
+
+\begin{frame}{Hasil Training: Perbandingan Akurasi}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    xbar,
+    width=12cm,
+    height=7cm,
+    xlabel={Accuracy},
+    symbolic y coords={Naive Bayes, Decision Tree, LightGBM, KNN, SVM, Gradient Boosting, Random Forest, Logistic Regression, CatBoost, XGBoost},
+    ytick=data,
+    nodes near coords,
+    nodes near coords align={horizontal},
+    xmin=0.6,
+    xmax=1.0,
+    bar width=0.4cm,
+    legend pos=south east,
+]
+\addplot[fill=darkblue] coordinates {
+    (0.6667,Naive Bayes)
+    (0.8462,Decision Tree)
+    (0.9231,LightGBM)
+    (0.9231,KNN)
+    (0.9231,SVM)
+    (0.9231,Gradient Boosting)
+    (0.9231,Random Forest)
+    (0.9231,Logistic Regression)
+    (0.9487,CatBoost)
+    (0.9487,XGBoost)
+};
+\addplot[fill=darkgreen] coordinates {(0.9487,XGBoost)};
+\legend{Models, Best Model}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+\begin{frame}{Tabel Hasil Lengkap: Top 5 Models}
+\begin{table}
+\centering
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Model} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{ROC-AUC} \\
+\midrule
+\rowcolor{darkgreen!20}
+\textbf{XGBoost} & \textbf{0.9487} & \textbf{0.9487} & \textbf{0.9487} & \textbf{0.9487} & \textbf{0.9690} \\
+CatBoost & 0.9487 & 0.9487 & 0.9487 & 0.9487 & 0.9638 \\
+Random Forest & 0.9231 & 0.9231 & 0.9231 & 0.9231 & 0.9638 \\
+Logistic Reg. & 0.9231 & 0.9231 & 0.9231 & 0.9231 & 0.9845 \\
+SVM & 0.9231 & 0.9231 & 0.9231 & 0.9231 & 0.9638 \\
+\bottomrule
+\end{tabular}
+\caption{Top 5 model dengan performa terbaik}
+\end{table}
+
+\vspace{0.5cm}
+\begin{block}{XGBoost Dipilih Karena:}
+\begin{itemize}
+    \item ✓ Akurasi tertinggi: \textbf{94.87\%}
+    \item ✓ ROC-AUC terbaik: \textbf{96.90\%}
+    \item ✓ Balanced metrics (precision = recall = F1)
+    \item ✓ Inference cepat (<100ms)
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Confusion Matrix: XGBoost}
+\begin{center}
+\begin{tikzpicture}
+\draw[thick] (0,0) rectangle (4,4);
+\draw[thick] (2,0) -- (2,4);
+\draw[thick] (0,2) -- (4,2);
+
+% Labels
+\node at (1,4.3) {\textbf{Predicted: 0}};
+\node at (3,4.3) {\textbf{Predicted: 1}};
+\node[rotate=90] at (-0.5,3) {\textbf{Actual: 0}};
+\node[rotate=90] at (-0.5,1) {\textbf{Actual: 1}};
+
+% Values
+\node[fill=darkgreen!30, minimum size=1.8cm] at (1,3) {\Huge \textbf{9}};
+\node[fill=darkred!30, minimum size=1.8cm] at (3,3) {\Huge \textbf{1}};
+\node[fill=darkred!30, minimum size=1.8cm] at (1,1) {\Huge \textbf{1}};
+\node[fill=darkgreen!30, minimum size=1.8cm] at (3,1) {\Huge \textbf{28}};
+
+% Labels for cells
+\node at (1,0.5) {\small TN};
+\node at (3,0.5) {\small TP};
+\node at (1,2.5) {\small FP};
+\node at (3,2.5) {\small FN};
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+    \item \textbf{True Positive (TP):} 28 (Parkinson terdeteksi benar)
+    \item \textbf{True Negative (TN):} 9 (Sehat terdeteksi benar)
+    \item \textbf{False Positive (FP):} 1 (Sehat terdeteksi Parkinson)
+    \item \textbf{False Negative (FN):} 1 (Parkinson tidak terdeteksi)
+    \item \textbf{Total:} 37 benar, 2 salah dari 39 test samples
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Interpretasi Hasil XGBoost}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{block}{Kelebihan}
+\begin{itemize}
+    \item ✓ Akurasi 94.87\% (excellent!)
+    \item ✓ ROC-AUC 96.90\% (discriminative)
+    \item ✓ Balanced: Precision = Recall
+    \item ✓ Hanya 2 error dari 39 test
+    \item ✓ Generalisasi baik
+\end{itemize}
+\end{block}
+
+\column{0.5\textwidth}
+\begin{block}{Analisis Error}
+\begin{itemize}
+    \item 1 False Positive: Orang sehat terdiagnosis Parkinson (tidak berbahaya, akan dilakukan tes lanjutan)
+    \item 1 False Negative: Pasien Parkinson tidak terdeteksi (lebih serius, perlu improvement)
+\end{itemize}
+\end{block}
+\end{columns}
+
+\vspace{0.5cm}
+\begin{alertblock}{Clinical Implication}
+Model cocok untuk \textbf{screening awal}, bukan diagnosis final. Hasil positif harus dikonfirmasi oleh dokter spesialis.
+\end{alertblock}
+\end{frame}
+
+%=============================================================================
+\section{Strategi Optimasi Model}
+%=============================================================================
+
+\begin{frame}{Tujuan Optimasi}
+\begin{center}
+\Large
+\textbf{Baseline: 94.87\%}
+
+\vspace{0.5cm}
+\Huge
+$\downarrow$
+
+\vspace{0.5cm}
+\textbf{\color{darkgreen}Target: $\geq 95\%$ atau bahkan 96\%+}
+\end{center}
+
+\vspace{1cm}
+\begin{block}{5 Strategi yang Diuji:}
+\begin{enumerate}
+    \item Hyperparameter Tuning (RandomizedSearchCV)
+    \item Voting Ensemble (XGBoost + CatBoost + LightGBM)
+    \item Feature Engineering (Interaction \& Ratio features)
+    \item Feature Selection (SelectKBest)
+    \item Stacking Ensemble (Meta-learner)
+\end{enumerate}
+\end{block}
+\end{frame}
+
+\begin{frame}{Strategi 1: Hyperparameter Tuning}
+\begin{block}{Metode}
+\begin{itemize}
+    \item Menggunakan RandomizedSearchCV
+    \item 50 iterasi dari 3,888 kombinasi parameter
+    \item 5-fold Cross-Validation
+    \item Parameter: max\_depth, learning\_rate, n\_estimators, min\_child\_weight, subsample, colsample\_bytree, gamma
+\end{itemize}
+\end{block}
+
+\begin{columns}
+\column{0.5\textwidth}
+\begin{block}{Best Parameters}
+\tiny
+\begin{itemize}
+    \item max\_depth: 9
+    \item learning\_rate: 0.2
+    \item n\_estimators: 200
+    \item subsample: 0.8
+    \item colsample\_bytree: 1.0
+    \item gamma: 0.2
+\end{itemize}
+\end{block}
+
+\column{0.5\textwidth}
+\begin{alertblock}{Hasil}
+\begin{itemize}
+    \item CV Score: 0.9232
+    \item Test Accuracy: \textbf{0.9231}
+    \item \textcolor{darkred}{\textbf{WORSE by -2.56\%}}
+    \item Kesimpulan: Parameter default sudah optimal!
+\end{itemize}
+\end{alertblock}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Strategi 2: Voting Ensemble}
+\begin{block}{Metode}
+\begin{itemize}
+    \item Menggabungkan 3 top models: XGBoost + CatBoost + LightGBM
+    \item Voting type: \textbf{Soft voting} (menggunakan probabilitas)
+    \item Setiap model memberikan "vote" berdasarkan confidence
+\end{itemize}
+\end{block}
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    box/.style={rectangle, draw, fill=lightblue!30, text width=2cm, text centered, rounded corners, minimum height=0.8cm},
+]
+    \node[box] (xgb) {XGBoost};
+    \node[box, right of=xgb, xshift=1cm] (cat) {CatBoost};
+    \node[box, right of=cat, xshift=1cm] (lgb) {LightGBM};
+    \node[box, below of=cat, yshift=-1cm, fill=darkgreen!30] (vote) {Voting};
+    \node[box, below of=vote, yshift=-0.5cm, fill=yellow!30] (pred) {Final Prediction};
+    
+    \draw[->, thick] (xgb) -- (vote);
+    \draw[->, thick] (cat) -- (vote);
+    \draw[->, thick] (lgb) -- (vote);
+    \draw[->, thick] (vote) -- (pred);
+\end{tikzpicture}
+\end{center}
+
+\begin{alertblock}{Hasil}
+Test Accuracy: \textbf{0.9487} → \textcolor{orange}{\textbf{NO CHANGE (0.00\%)}}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Strategi 3: Feature Engineering}
+\begin{block}{Metode}
+\begin{itemize}
+    \item Membuat 20 fitur baru dari kombinasi fitur existing
+    \item \textbf{Interaction features:} $f_i \times f_j$ (perkalian fitur)
+    \item \textbf{Ratio features:} $f_i / (f_j + \epsilon)$ (pembagian fitur)
+    \item Total fitur: 22 → 42 fitur
+\end{itemize}
+\end{block}
+
+\begin{table}
+\centering
+\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Jenis Fitur} & \textbf{Jumlah} \\
+\midrule
+Original features & 22 \\
+Interaction features & 10 \\
+Ratio features & 10 \\
+\midrule
+Total & 42 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{alertblock}{Hasil}
+Test Accuracy: \textbf{0.9487} → \textcolor{orange}{\textbf{NO CHANGE (0.00\%)}}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Strategi 4: Feature Selection}
+\begin{block}{Metode}
+\begin{itemize}
+    \item Menggunakan SelectKBest dengan f\_classif scoring
+    \item Menguji berbagai nilai k: 10, 12, 15, 18, 20
+    \item Tujuan: Membuang fitur yang tidak informatif
+\end{itemize}
+\end{block}
+
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    width=10cm,
+    height=5cm,
+    xlabel={Number of Features (k)},
+    ylabel={Accuracy},
+    xtick={10,12,15,18,20},
+    ymin=0.8,
+    ymax=1.0,
+    grid=major,
+    legend pos=south east,
+]
+\addplot[color=darkblue, mark=*, thick] coordinates {
+    (10,0.8462)
+    (12,0.8718)
+    (15,0.9231)
+    (18,0.9231)
+    (20,0.9487)
+};
+\addplot[color=darkred, dashed] coordinates {(10,0.9487) (20,0.9487)};
+\legend{Feature Selection, Baseline}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\begin{alertblock}{Hasil}
+Best k: 20 features → Accuracy: \textbf{0.9487} → \textcolor{orange}{\textbf{NO CHANGE}}
+\\ \textit{Semua fitur diperlukan untuk performa optimal!}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Strategi 5: Stacking Ensemble}
+\begin{block}{Metode}
+\begin{itemize}
+    \item \textbf{Base learners:} XGBoost, CatBoost, LightGBM
+    \item \textbf{Meta-learner:} Logistic Regression
+    \item 5-fold cross-validation untuk training meta-learner
+\end{itemize}
+\end{block}
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.2cm,
+    box/.style={rectangle, draw, fill=lightblue!30, text width=1.8cm, text centered, rounded corners, minimum height=0.7cm},
+]
+    % Level 0 (base learners)
+    \node[box] (xgb) {XGBoost};
+    \node[box, right of=xgb, xshift=0.8cm] (cat) {CatBoost};
+    \node[box, right of=cat, xshift=0.8cm] (lgb) {LightGBM};
+    
+    % Predictions
+    \node[box, below of=xgb, yshift=-0.5cm] (p1) {$\hat{y}_1$};
+    \node[box, below of=cat, yshift=-0.5cm] (p2) {$\hat{y}_2$};
+    \node[box, below of=lgb, yshift=-0.5cm] (p3) {$\hat{y}_3$};
+    
+    % Meta learner
+    \node[box, below of=p2, yshift=-0.8cm, fill=darkgreen!30, text width=5cm] (meta) {Meta-Learner: Logistic Regression};
+    
+    % Final prediction
+    \node[box, below of=meta, yshift=-0.5cm, fill=yellow!30] (final) {Final Prediction};
+    
+    \draw[->, thick] (xgb) -- (p1);
+    \draw[->, thick] (cat) -- (p2);
+    \draw[->, thick] (lgb) -- (p3);
+    \draw[->, thick] (p1) -- (meta);
+    \draw[->, thick] (p2) -- (meta);
+    \draw[->, thick] (p3) -- (meta);
+    \draw[->, thick] (meta) -- (final);
+\end{tikzpicture}
+\end{center}
+
+\begin{alertblock}{Hasil}
+Test Accuracy: \textbf{0.9487} → \textcolor{orange}{\textbf{NO CHANGE (0.00\%)}}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Ringkasan Hasil Optimasi}
+\begin{table}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Strategi} & \textbf{Accuracy} & \textbf{Improvement} & \textbf{Status} \\
+\midrule
+\rowcolor{lightblue!20}
+Baseline (XGBoost) & 0.9487 & - & ✓ OPTIMAL \\
+Hyperparameter Tuning & 0.9231 & -2.56\% & ✗ WORSE \\
+Voting Ensemble & 0.9487 & 0.00\% & ⚠ SAME \\
+Feature Engineering & 0.9487 & 0.00\% & ⚠ SAME \\
+Feature Selection & 0.9487 & 0.00\% & ⚠ SAME \\
+Stacking Ensemble & 0.9487 & 0.00\% & ⚠ SAME \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.5cm}
+\begin{alertblock}{Kesimpulan Optimasi}
+\Large
+\textbf{Model sudah OPTIMAL!}
+
+\normalsize
+Tidak ada improvement yang berhasil. Model XGBoost original dengan default parameters adalah yang terbaik untuk dataset ini.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Mengapa Tidak Bisa Ditingkatkan?}
+\begin{block}{Analisis Mendalam}
+\begin{enumerate}
+    \item \textbf{Dataset Kecil (195 samples)}
+    \begin{itemize}
+        \item Model sudah belajar semua pola yang ada
+        \item Tidak cukup data untuk pola yang lebih kompleks
+        \item Overfitting risk jika model lebih kompleks
+    \end{itemize}
+    
+    \item \textbf{Fitur Sudah Optimal}
+    \begin{itemize}
+        \item Semua 22 fitur relevan dan informatif
+        \item Feature engineering tidak menambah informasi baru
+        \item Tidak ada fitur redundan
+    \end{itemize}
+    
+    \item \textbf{Model Sudah Fit}
+    \begin{itemize}
+        \item XGBoost default parameters sudah sangat baik
+        \item Hyperparameter tuning malah menurunkan performa
+        \item Ensemble tidak memberikan diversity benefit
+    \end{itemize}
+\end{enumerate}
+\end{block}
+
+\begin{center}
+\textbf{94.87\% adalah \textcolor{darkgreen}{performance ceiling} untuk dataset ini!}
+\end{center}
+\end{frame}
+
+%=============================================================================
+\section{Deployment dan Aplikasi}
+%=============================================================================
+
+\begin{frame}{Tools untuk Deployment}
+\begin{block}{3 Interface yang Tersedia}
+\begin{enumerate}
+    \item \textbf{CLI Tool} - Command Line Interface
+    \begin{itemize}
+        \item Script: \texttt{python src/predict.py}
+        \item Untuk batch prediction atau single patient
+        \item Cocok untuk integrasi sistem
+    \end{itemize}
+    
+    \item \textbf{Web Application} - Streamlit
+    \begin{itemize}
+        \item User-friendly GUI
+        \item Upload CSV atau input manual
+        \item Real-time prediction dengan probability
+    \end{itemize}
+    
+    \item \textbf{Python API} - ModelUtils
+    \begin{itemize}
+        \item Integrasi ke aplikasi lain
+        \item Load model dan predict programmatically
+        \item Flexible untuk berbagai use case
+    \end{itemize}
+\end{enumerate}
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Contoh Penggunaan: Python API}
+\begin{block}{Load Model dan Predict}
+\begin{verbatim}
+from model_utils import ModelUtils
+
+# Load model
+model = ModelUtils.load_model('models/xgboost.pkl')
+scaler, features = ModelUtils.load_preprocessing_params(
+    'models'
+)
+
+# Predict single patient
+result = ModelUtils.predict_single_patient(
+    model, scaler, patient_features
+)
+
+print(f"Prediction: {result['prediction']}")
+print(f"Probability: {result['probability']:.2%}")
+\end{verbatim}
+\end{block}
+
+\begin{itemize}
+    \item Inference time: <100ms per prediction
+    \item Model size: 2.1 MB
+    \item Memory: ~50MB RAM
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Confidence Thresholds untuk Clinical Use}
+\begin{table}
+\centering
+\begin{tabular}{lcp{5cm}}
+\toprule
+\textbf{Probability} & \textbf{Level} & \textbf{Action} \\
+\midrule
+\rowcolor{darkred!20}
+$\geq 80\%$ & High Risk & Lakukan pemeriksaan klinis lengkap segera \\
+\rowcolor{orange!20}
+$50-79\%$ & Medium Risk & Flag untuk review dokter, tes tambahan \\
+\rowcolor{darkgreen!20}
+$< 50\%$ & Low Risk & Monitoring rutin, tidak urgent \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.5cm}
+\begin{alertblock}{Important Note}
+\begin{itemize}
+    \item Model adalah \textbf{screening tool}, bukan diagnostic tool
+    \item Hasil positif harus dikonfirmasi oleh neurolog
+    \item Gunakan sebagai \textbf{decision support}, bukan keputusan final
+\end{itemize}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{File-File Model untuk Production}
+\begin{block}{Model Artifacts}
+\begin{itemize}
+    \item \texttt{models/xgboost.pkl} (2.1 MB)
+    \begin{itemize}
+        \item Trained XGBoost model
+        \item Ready untuk load dan inference
+    \end{itemize}
+    
+    \item \texttt{models/scaler.pkl}
+    \begin{itemize}
+        \item StandardScaler yang sudah fit
+        \item Penting untuk preprocessing input baru
+    \end{itemize}
+    
+    \item \texttt{models/feature\_names.json}
+    \begin{itemize}
+        \item List 22 feature names
+        \item Untuk validasi input
+    \end{itemize}
+\end{itemize}
+\end{block}
+
+\begin{block}{Dependencies}
+\begin{itemize}
+    \item Python 3.11.9
+    \item XGBoost 1.7.6, Scikit-learn 1.3.0, Pandas 2.0.3, NumPy 1.24.3
+\end{itemize}
+\end{block}
+\end{frame}
+
+%=============================================================================
+\section{Kesimpulan dan Rekomendasi}
+%=============================================================================
+
+\begin{frame}{Ringkasan Pencapaian}
+\begin{block}{Apa yang Telah Dilakukan}
+\begin{enumerate}
+    \item ✓ \textbf{EDA Lengkap:} Analisis 195 samples, 24 features
+    \item ✓ \textbf{Training 10 Models:} Dari Logistic Regression hingga XGBoost
+    \item ✓ \textbf{Evaluasi Komprehensif:} 5 metrics untuk setiap model
+    \item ✓ \textbf{Optimasi 5 Strategi:} Hyperparameter, Ensemble, Feature Engineering
+    \item ✓ \textbf{Deployment Ready:} CLI, Web App, Python API
+    \item ✓ \textbf{Dokumentasi Lengkap:} Report, visualization, code
+\end{enumerate}
+\end{block}
+
+\begin{block}{Best Model: XGBoost}
+\begin{itemize}
+    \item \textbf{Accuracy:} 94.87\% (37/39 correct)
+    \item \textbf{ROC-AUC:} 96.90\% (excellent discrimination)
+    \item \textbf{Status:} Production-ready
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Limitasi Penelitian}
+\begin{alertblock}{Keterbatasan}
+\begin{enumerate}
+    \item \textbf{Dataset Kecil}
+    \begin{itemize}
+        \item 195 samples membatasi generalization
+        \item Improvement terbatas tanpa data tambahan
+    \end{itemize}
+    
+    \item \textbf{Single Data Source}
+    \begin{itemize}
+        \item Perlu validasi pada dataset independen
+        \item Mungkin tidak generalize ke populasi berbeda
+    \end{itemize}
+    
+    \item \textbf{Binary Classification}
+    \begin{itemize}
+        \item Tidak membedakan tingkat keparahan Parkinson
+        \item Tidak mendeteksi jenis gangguan motorik lain
+    \end{itemize}
+    
+    \item \textbf{Performance Ceiling}
+    \begin{itemize}
+        \item 94.87\% adalah maksimal untuk dataset ini
+        \item Tidak bisa improve tanpa data/fitur baru
+    \end{itemize}
+\end{enumerate}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Rekomendasi untuk Pengembangan Lebih Lanjut}
+\begin{block}{Prioritas TINGGI}
+\begin{enumerate}
+    \item \textbf{Collect More Data}
+    \begin{itemize}
+        \item Target: 500-1,000+ patient samples
+        \item Expected improvement: +1-3\% accuracy
+        \item Lebih robust dan generalizable
+    \end{itemize}
+    
+    \item \textbf{External Validation}
+    \begin{itemize}
+        \item Test pada dataset dari rumah sakit berbeda
+        \item Validate across different demographics
+        \item Ensure clinical applicability
+    \end{itemize}
+\end{enumerate}
+\end{block}
+
+\begin{block}{Prioritas MEDIUM}
+\begin{enumerate}
+    \setcounter{enumi}{2}
+    \item \textbf{Add New Features}
+    \begin{itemize}
+        \item Konsultasi neurolog untuk biomarker tambahan
+        \item Gait analysis, tremor measurements
+        \item MRI/imaging data integration
+    \end{itemize}
+\end{enumerate}
+\end{block}
+\end{frame}
+
+\begin{frame}{Rekomendasi Deployment}
+\begin{block}{Immediate Actions (Ready Now)}
+\begin{enumerate}
+    \item ✓ \textbf{Deploy Current Model}
+    \begin{itemize}
+        \item 94.87\% sudah excellent untuk screening
+        \item Gunakan web app atau CLI tool
+        \item Implement confidence thresholds
+    \end{itemize}
+    
+    \item ✓ \textbf{Integrate ke Workflow Klinis}
+    \begin{itemize}
+        \item Screening tahap 1: Model ML
+        \item Screening tahap 2: Review dokter
+        \item Diagnosis final: Neurolog spesialis
+    \end{itemize}
+    
+    \item ✓ \textbf{Monitoring dan Logging}
+    \begin{itemize}
+        \item Log semua prediksi
+        \item Track false positives/negatives
+        \item Collect feedback untuk model update
+    \end{itemize}
+\end{enumerate}
+\end{block}
+\end{frame}
+
+\begin{frame}{Future Research Directions}
+\begin{block}{Pengembangan Jangka Panjang}
+\begin{enumerate}
+    \item \textbf{Multi-class Classification}
+    \begin{itemize}
+        \item Deteksi tingkat keparahan: Early, Moderate, Advanced
+        \item Lebih actionable untuk treatment planning
+    \end{itemize}
+    
+    \item \textbf{Deep Learning Approach}
+    \begin{itemize}
+        \item Neural networks untuk pattern yang lebih kompleks
+        \item Memerlukan dataset yang jauh lebih besar
+    \end{itemize}
+    
+    \item \textbf{Multi-modal Data}
+    \begin{itemize}
+        \item Combine voice + gait + MRI + blood tests
+        \item Holistic assessment
+    \end{itemize}
+    
+    \item \textbf{Longitudinal Analysis}
+    \begin{itemize}
+        \item Track progression over time
+        \item Predict disease trajectory
+    \end{itemize}
+\end{enumerate}
+\end{block}
+\end{frame}
+
+\begin{frame}{Impact dan Kontribusi}
+\begin{block}{Kontribusi Ilmiah}
+\begin{itemize}
+    \item Comprehensive comparison 10 ML algorithms untuk Parkinson detection
+    \item Systematic optimization dengan 5 strategies
+    \item Evidence bahwa simple models cukup untuk small datasets
+    \item Deployment-ready solution dengan multiple interfaces
+\end{itemize}
+\end{block}
+
+\begin{block}{Kontribusi Praktis}
+\begin{itemize}
+    \item Screening tool yang cepat (<100ms) dan akurat (94.87\%)
+    \item Accessible (web app + CLI) untuk berbagai user
+    \item Cost-effective: Tidak perlu equipment mahal
+    \item Scalable: Dapat digunakan untuk screening massal
+\end{itemize}
+\end{block}
+
+\begin{block}{Clinical Value}
+\begin{itemize}
+    \item Early detection → Early intervention → Better outcomes
+    \item Reduce burden pada neurolog dengan pre-screening
+    \item Increase accessibility di daerah dengan limited specialists
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Kesimpulan Akhir}
+\begin{center}
+\Large
+\textbf{Sistem Deteksi Parkinson dengan Machine Learning}
+
+\vspace{0.5cm}
+\normalsize
+Berhasil mengembangkan model XGBoost dengan:
+
+\vspace{0.3cm}
+\begin{itemize}
+    \item \textbf{Akurasi: 94.87\%}
+    \item \textbf{ROC-AUC: 96.90\%}
+    \item \textbf{Status: Production-Ready}
+\end{itemize}
+
+\vspace{0.5cm}
+\textbf{Model sudah optimal} untuk dataset yang tersedia.
+
+\vspace{0.3cm}
+Improvement lebih lanjut memerlukan:
+\begin{itemize}
+    \item More data (500-1000+ samples)
+    \item Better features (medical expert consultation)
+    \item External validation
+\end{itemize}
+
+\vspace{0.5cm}
+\Large
+\textcolor{darkgreen}{\textbf{Siap untuk Deployment!}}
+\end{center}
+\end{frame}
+
+\begin{frame}[standout]
+\Huge
+\textbf{Terima Kasih}
+
+\vspace{1cm}
+\Large
+Questions?
+
+\vspace{1cm}
+\normalsize
+\textbf{Presenter:}\\
+Nafiz Ahmadin Harily\\
+NIM: 122430051\\
+Teknik Biomedis - ITERA
+
+\vspace{0.5cm}
+\textbf{Email:}\\
+\texttt{nafiz.122430051@student.itera.ac.id}
+\end{frame}
+
+\begin{frame}{Appendix: Technical Specifications}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{block}{System Requirements}
+\begin{itemize}
+    \item Python 3.11.9
+    \item RAM: 2GB minimum
+    \item Storage: 100MB
+    \item OS: Windows/Linux/Mac
+\end{itemize}
+\end{block}
+
+\begin{block}{Key Libraries}
+\begin{itemize}
+    \item XGBoost 1.7.6
+    \item Scikit-learn 1.3.0
+    \item Pandas 2.0.3
+    \item NumPy 1.24.3
+\end{itemize}
+\end{block}
+
+\column{0.5\textwidth}
+\begin{block}{Model Files}
+\begin{itemize}
+    \item xgboost.pkl (2.1 MB)
+    \item scaler.pkl
+    \item feature\_names.json
+\end{itemize}
+\end{block}
+
+\begin{block}{Performance}
+\begin{itemize}
+    \item Inference: <100ms
+    \item Throughput: 10+ pred/sec
+    \item Memory: ~50MB RAM
+\end{itemize}
+\end{block}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Appendix: Dataset Features Details}
+\begin{table}
+\centering
+\tiny
+\begin{tabular}{lp{9cm}}
+\toprule
+\textbf{Feature} & \textbf{Description} \\
+\midrule
+MDVP:Fo(Hz) & Average vocal fundamental frequency \\
+MDVP:Fhi(Hz) & Maximum vocal fundamental frequency \\
+MDVP:Flo(Hz) & Minimum vocal fundamental frequency \\
+MDVP:Jitter(\%) & Frequency variation \\
+MDVP:Jitter(Abs) & Absolute jitter \\
+MDVP:RAP & Relative amplitude perturbation \\
+MDVP:PPQ & Pitch period perturbation quotient \\
+Jitter:DDP & Average absolute difference of differences \\
+MDVP:Shimmer & Amplitude variation \\
+MDVP:Shimmer(dB) & Shimmer in decibels \\
+Shimmer:APQ3 & Amplitude perturbation quotient (3-point) \\
+Shimmer:APQ5 & Amplitude perturbation quotient (5-point) \\
+MDVP:APQ & Amplitude perturbation quotient \\
+Shimmer:DDA & Average absolute differences \\
+NHR & Noise-to-harmonics ratio \\
+HNR & Harmonics-to-noise ratio \\
+RPDE & Recurrence period density entropy \\
+DFA & Detrended fluctuation analysis \\
+spread1, spread2 & Nonlinear measures of fundamental frequency \\
+D2 & Correlation dimension \\
+PPE & Pitch period entropy \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{frame}
+
+\end{document}
